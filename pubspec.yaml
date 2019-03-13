@@ -23,6 +23,12 @@ dependencies:
   # Redux Sync support
   flutter_redux: ^0.5.2
 
+  # Redux Async support
+  redux_thunk: ^0.2.0
+
+  # Http support
+  http: ^0.12.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

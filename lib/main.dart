@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:redux/redux.dart';
 import 'package:flutter_redux/flutter_redux.dart'; // Redux Sync calls
+import 'package:redux_thunk/redux_thunk.dart';     // Redux Async calls
+import 'dart:async';
 import 'dart:convert';   // to convert Response object to Map object
+import 'package:http/http.dart' as http;
 
 /*
  * As per blog
@@ -14,16 +17,57 @@ import 'dart:convert';   // to convert Response object to Map object
 // function or reducers which will predict next state
 class AppState {
   int _counter;
+  String _quote;
+  String _author;
 
   int get counter => _counter;
+  String get quote => _quote;
+  String get author => _author;
 
-  AppState(this._counter);
+  AppState(this._counter, this._quote, this._author);
 }
 
 // Sync Action
 enum Action {
   IncrementAction
 }
+
+// The object which will be used by Async, ThunkAction, to send Sync Action
+// Async -> ThunkAction -> Sync
+class UpdateQuoteAction {
+  String _quote;
+  String _author;
+
+  String get quote => this._quote;
+  String get author => this._author;
+
+  UpdateQuoteAction(this._quote, this._author);
+}
+
+// ThunkAction
+ThunkAction<AppState> getRandomQuote = (Store<AppState> store) async {
+  debugPrint("\nIn ThunkAction11");
+
+  http.Response response = await http.get(
+    Uri.encodeFull('http://quotesondesign.com/wp-json/posts?filter[orderby]=rand&filter[posts_per_page]=1'),
+  );
+
+  debugPrint("\nGot response");
+  debugPrint(response.body);
+
+  List<dynamic> result = json.decode(response.body);
+
+  // This is to remove the <p></p> html tag received. This code is not crucial.
+  String quote = result[0]['content'].replaceAll(new RegExp('[(<p>)(</p>)]'), '').replaceAll(new RegExp('&#8217;'),'\'');
+  String author = result[0]['title'];
+
+  store.dispatch(
+      new UpdateQuoteAction(
+          quote,
+          author
+      )
+  );
+};
 
 // Reducer
 AppState reducer(AppState prev, dynamic action) 
@@ -33,7 +77,15 @@ AppState reducer(AppState prev, dynamic action)
 
     debugPrint("\nReducer: Action.IncrementAction");
 
-    AppState newAppState = new AppState(prev.counter + 1);
+    AppState newAppState = new AppState(prev.counter + 1, prev.quote, prev.author);
+
+    return newAppState;
+
+  } else if (action is UpdateQuoteAction) {
+
+    debugPrint("\nReducer: UpdateQuoteAction");
+
+    AppState newAppState = new AppState(prev.counter, action.quote, action.author);
 
     return newAppState;
 
@@ -48,7 +100,8 @@ AppState reducer(AppState prev, dynamic action)
 // This can be done from our Main also.
 final store = new Store<AppState>(
   reducer,
-  initialState: new AppState(0),
+  initialState: new AppState(0, "", ""),
+  middleware: [thunkMiddleware]
 );
 
 
@@ -123,6 +176,33 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
+
+            // UI-View Connector: display random quote and its author
+            StoreConnector<AppState, AppState>(
+              converter: (store) => store.state,
+              builder: (_, state) {
+                return new Text(
+                    ' ${state.quote} \n -${state.author}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20.0
+                  ),
+                );
+              },
+            ),
+
+            // UI-Action connector: generate quote button
+            StoreConnector<AppState, GenerateQuote>(
+              converter: (store) => () => store.dispatch(getRandomQuote),
+              builder: (_, generateQuoteCallback) {
+                return new FlatButton(
+                  color: Colors.lightBlue,
+                    onPressed: generateQuoteCallback,
+                    child: new Text("generate random quote")
+                );
+              },
+            )
+
           ],
         ),
       ),
@@ -141,3 +221,14 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 typedef void IncrementCounter(); // This is sync.
+typedef void GenerateQuote(); // This is async.
+
+// NOTES:
+// Error observed and solution
+// ----------------------------
+// Http connection problem:
+//   The Emulator was not able to connect, switch to real hardware.
+//   The app was getting <!DOCTYPE html> ...
+//   The internet was specified as Living-Gast and thus it was redirect to login page.
+//   Connected via eduroam and it is working.
+

@@ -156,6 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("\nIn Build stateful widget");
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -170,6 +171,7 @@ class _MyHomePageState extends State<MyHomePage> {
             StoreConnector<AppState, int>(
               converter: (store) => store.state.counter,
               builder: (_, counter) {
+                debugPrint("\nCounter: Display UX builder");
                 return Text(
                   '$counter',
                   style: Theme.of(context).textTheme.display1,
@@ -181,6 +183,7 @@ class _MyHomePageState extends State<MyHomePage> {
             StoreConnector<AppState, AppState>(
               converter: (store) => store.state,
               builder: (_, state) {
+                debugPrint("\nQuote: Display UX builder");
                 return new Text(
                     ' ${state.quote} \n -${state.author}',
                   textAlign: TextAlign.center,
@@ -195,6 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
             StoreConnector<AppState, GenerateQuote>(
               converter: (store) => () => store.dispatch(getRandomQuote),
               builder: (_, generateQuoteCallback) {
+                debugPrint("\nQuote: Action UI builder");
                 return new FlatButton(
                   color: Colors.lightBlue,
                     onPressed: generateQuoteCallback,
@@ -209,6 +213,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: StoreConnector<AppState, IncrementCounter>(
         converter: (store) => () => store.dispatch(Action.IncrementAction),
         builder: (_, incrementCallback) {
+          debugPrint("\nCounter: Action UI builder");
           return new FloatingActionButton(
             onPressed: incrementCallback,
             tooltip: 'Increment',
